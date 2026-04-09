@@ -1,0 +1,8 @@
+C:/Users/New/Desktop/diskpack mine/build-release/CMakeFiles/ALL_BUILD.dir
+C:/Users/New/Desktop/diskpack mine/build-release/CMakeFiles/ZERO_CHECK.dir
+C:/Users/New/Desktop/diskpack mine/build-release/diskpack/CMakeFiles/diskpack.dir
+C:/Users/New/Desktop/diskpack mine/build-release/diskpack/CMakeFiles/ALL_BUILD.dir
+C:/Users/New/Desktop/diskpack mine/build-release/visualizer/CMakeFiles/visualizer.dir
+C:/Users/New/Desktop/diskpack mine/build-release/visualizer/CMakeFiles/ALL_BUILD.dir
+C:/Users/New/Desktop/diskpack mine/build-release/config-locator/CMakeFiles/config-locator.dir
+C:/Users/New/Desktop/diskpack mine/build-release/config-locator/CMakeFiles/ALL_BUILD.dir

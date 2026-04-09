@@ -1,0 +1,10 @@
+^C:\USERS\NEW\DESKTOP\DISKPACK MINE\BUILD-RELEASE\CMAKEFILES\4EBD0B07E5ABA6C51E1CF12351540A36\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/New/Desktop/diskpack mine" "-BC:/Users/New/Desktop/diskpack mine/build-release" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "C:/Users/New/Desktop/diskpack mine/build-release/diskpack_project.slnx"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

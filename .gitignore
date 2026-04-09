@@ -1,0 +1,15 @@
+consts/
+build/
+storage/*.txt
+draft.txt
+.vscode
+.cache
+visualization-tool/src/__pycache__
+_deps
+*.yaml
+*.json
+*.ipynb
+dumpster
+images/old
+images/gifs/gif*
+images/default.svg
