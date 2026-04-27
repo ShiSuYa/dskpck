@@ -183,4 +183,4 @@ const std::vector<std::pair<Interval, Interval>> three_disk_radii{
     {{0.386105, 0.386107}, {0.149077, 0.149079}},
 };
 
-} // namespace diskpack
+}

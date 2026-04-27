@@ -6,36 +6,27 @@
 #include <stack>
 #include <set>
 #include <list>
-#include <deque>
 #include <optional>
-
-using DiskPointer = diskpack::DiskPtr;
 
 namespace diskpack {
 
-class Corona;
-class CoronaSignature;
-class ConnectivityGraph;
+  class Corona;
+  class CoronaSignature;
+  class ConnectivityGraph;
 
-using CoronaSignaturePtr = std::shared_ptr<CoronaSignature>;
-using CoronaSignatureList = std::list<CoronaSignaturePtr>;
+  using CoronaSignaturePtr = std::shared_ptr<CoronaSignature>;
+  using CoronaSignatureList = std::list<CoronaSignaturePtr>;
 
-bool CoronaSignaturePtrCompare(const CoronaSignaturePtr &a,
-                               const CoronaSignaturePtr &b);
+  bool CoronaSignaturePtrCompare(const CoronaSignaturePtr &a, 
+                                 const CoronaSignaturePtr &b);
 
-bool operator<(const CoronaSignaturePtr &a,
-               const CoronaSignaturePtr &b);
+  bool operator< (const CoronaSignaturePtr &a, 
+                  const CoronaSignaturePtr &b);   
+             
 
+  class ConnectivityGraph {     // Checks conditions required for compact packings. Used in search to validate regions.
 
-/// ------------------------------------------------------------
-/// ConnectivityGraph
-///
-/// Проверяет графовые инварианты, необходимые для существования
-/// компактной упаковки.
-/// ------------------------------------------------------------
-class ConnectivityGraph {
-
-public:
+  public:
 
     const size_t MAX_SIGNATURES = 5000;
 
@@ -43,11 +34,11 @@ public:
 
     using DiffStack = std::stack<std::shared_ptr<CoronaSignatureList>>;
 
-private:
-
+  private:
+  
     bool broken_state = false;
 
-    std::queue<std::tuple<size_t,size_t,size_t>> redundant_triangles;
+    std::queue<std::tuple<size_t, size_t, size_t>> redundant_triangles;
 
     std::vector<CoronaSignatureList> signatures;
 
@@ -55,178 +46,125 @@ private:
 
     std::vector<std::vector<size_t>> transitions;
 
-    std::vector<std::vector<bool>> adjacency_matrix;
+    std::vector<std::vector<bool>> edges;
 
-private:
+    void Push(const CoronaSignature& signature);
 
-    void AddSignature(const CoronaSignature& signature);
+    void Pop(const CoronaSignature& signature);
 
-    void RemoveSignature(const CoronaSignature& signature);
-
-    void RemoveRedundantTriangles(
-        std::shared_ptr<
-            std::vector<std::shared_ptr<CoronaSignatureList>>
-        > diff =
-        std::shared_ptr<
-            std::vector<std::shared_ptr<CoronaSignatureList>>
-        >()
-    );
+    void RemoveRedundantTriangles(std::shared_ptr<std::vector<std::shared_ptr<CoronaSignatureList>>> diff = std::shared_ptr<std::vector<std::shared_ptr<CoronaSignatureList>>>());
 
     void UpdateEdges();
 
-    size_t GetTransitionConst(size_t base,
-                              size_t i,
-                              size_t j) const;
+    size_t GetTransitionConst(size_t base, 
+                               size_t i, 
+                               size_t j) const;
 
-    size_t& GetTransition(size_t base,
-                          size_t i,
-                          size_t j);
-
+    size_t& GetTransition(size_t base, 
+                           size_t i, 
+                           size_t j);
+                           
     void FillCorona(
-        Corona& corona,
-        std::list<DiskPointer> &packing,
-        size_t start_index,
-        std::set<
-            CoronaSignaturePtr,
-            decltype(&CoronaSignaturePtrCompare)
-        > &unique_signatures
+      Corona& corona,
+      std::list<DiskPtr> &packing, 
+      size_t start_index, 
+      std::set<CoronaSignaturePtr, decltype(&CoronaSignaturePtrCompare)> &unique_signatures
     );
 
-public:
-
+  public:
     size_t Size() const;
-
     void DisplaySignatures() const;
-
-    ConnectivityGraph(SpiralOpCache &cache);
-
+    ConnectivityGraph(SpiralOpCache &lookup_table);
     bool HasOverflow() const;
 
-    void Refine(SpiralOpCache &cache);
-
+    void Refine(SpiralOpCache &lookup_table);
     bool Restore();
 
     bool IsViable() const;
-
-    bool HasTriangle(size_t i,
-                     size_t j,
+    bool HasTriangle(size_t i, 
+                     size_t j, 
                      size_t k) const;
-};
+  };
 
-
-/// ------------------------------------------------------------
-/// Corona
-///
-/// Представляет корону дисков вокруг центрального.
-/// ------------------------------------------------------------
-class Corona {
-
+  
+  class Corona {
     const size_t DEFAULT_OPERATOR_CAPACITY = 12;
 
     friend class CoronaSignature;
     friend class ConnectivityGraph;
 
-private:
+    const Disk &base;     // Central disk
+    std::deque<DiskPtr> corona;     // Surrounding disks; consecutive ones are tangent
 
-    const Disk &base_disk;
 
-    std::deque<DiskPointer> corona_disks;
+    std::vector<SpiralOpRef> operators_front;  // Auxiliary objects for computing positions of new disks
+    std::vector<SpiralOpRef> operators_back;   
+    IntervalPair leaf_front;              
+    IntervalPair leaf_back;               
+    SpiralOpCache &lookup_table;    
+    std::stack<bool> push_history;       
 
-    std::vector<SpiralOpRef> operators_front;
-
-    std::vector<SpiralOpRef> operators_back;
-
-    IntervalPair leaf_front;
-
-    IntervalPair leaf_back;
-
-    SpiralOpCache &operator_cache;
-
-    std::stack<bool> push_history;
-
-private:
-
-    SpiralOp computeOperatorsProduct(
-        const size_t &begin,
+    SpiralOp
+    computeOperatorsProduct(
+        const size_t &begin, 
         const size_t &end,
-        const std::vector<SpiralOpRef> &ops
+        const std::vector<SpiralOpRef> &operators
     ) const;
 
-    void buildSortedCorona(
-        const std::list<DiskPointer> &packing
+    void buildSortedCorona(     // Builds a counterclockwise ordered corona from scratch
+      const std::list<DiskPtr> &packing
     );
 
-public:
+  public:
 
     Corona(
-        const Disk &base,
-        const std::list<DiskPointer> &packing,
-        SpiralOpCache &cache
+      const Disk &b, 
+      const std::list<DiskPtr> &packing,
+          SpiralOpCache &lookup_table);
+
+    bool isCompleted();     // Checks if corona is complete
+
+    bool isContinuous() const;     // Checks continuity
+
+    bool peekNewDisk(     // Computes new disk without changing state
+      Disk &new_disk, 
+      size_t index, 
+      const std::optional<ConnectivityGraph> &graph = std::nullopt
+      );       
+
+    void Push(     // Adds disk to corona
+      const DiskPtr &disk, 
+      size_t index
     );
 
-    bool isCompleted();
-
-    bool isContinuous() const;
-
-    bool peekNewDisk(
-        Disk &new_disk,
-        size_t index,
-        const std::optional<ConnectivityGraph> &graph = std::nullopt
-    );
-
-    void PushDisk(
-        const DiskPointer &disk,
-        size_t index
-    );
-
-    void PopDisk();
+    void Pop();     // Removes last disk
 
     const Disk &getBase();
 
-    void displaySignature();
-};
+    void DisplaySignature();
+  };
 
 
-/// ------------------------------------------------------------
-/// CoronaSignature
-///
-/// Сигнатура короны: определяется количеством соседних пар
-/// типов дисков.
-/// ------------------------------------------------------------
-class CoronaSignature {
-
-private:
-
+  class CoronaSignature {     // Represents adjacency between disk types in a corona. Equal signatures mean equivalent coronas.
     const size_t radii_count;
-
-    const size_t base_type;
-
+    const size_t base;
     std::vector<size_t> transitions;
-
-    size_t& GetTransition(size_t i,
-                          size_t j);
-
-    size_t GetTransitionConst(size_t i,
+    size_t& GetTransition(size_t i, 
+                          size_t j);                     
+    size_t GetTransitionConst(size_t i, 
                               size_t j) const;
 
     friend class ConnectivityGraph;
-    friend class Corona;
+    friend Corona;
 
-public:
-
+  public:
     std::vector<bool> disk_presence;
-
     std::vector<size_t> specimen_indices;
-
     CoronaSignature(Corona &specimen);
-
     size_t getBase() const;
-
-    bool TestRadii(SpiralOpCache& cache) const;
-
+    bool TestRadii(SpiralOpCache& lookup_table) const;
     bool operator<(const CoronaSignature &other) const;
-
     bool operator==(const CoronaSignature &other) const;
-};
+  };
 
-} // namespace diskpack
+}

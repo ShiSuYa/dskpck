@@ -1,195 +1,108 @@
 #pragma once
 
-#include <diskpack/geometry.h>
 #include <diskpack/corona.h>
-
 #include <set>
 #include <random>
-#include <optional>
 
 namespace diskpack {
 
-using RadiusType = BaseType;
-
-struct LessNormCompare {
-    bool operator()(const DiskPtr& a, const DiskPtr& b) const {
-        return a->getNorm() < b->getNorm();
-    }
+enum PackingStatus {
+  complete,     // Packing was generated successfully
+  invalid,     // No valid packing exists for these radii
+  precision_error,     // Coordinate intervals became too wide
+  corona_error     // Corona construction failed
 };
 
-/// ------------------------------------------------------------
-/// Status of the packing generation process
-/// ------------------------------------------------------------
+using QueueType = std::multiset<DiskPtr, decltype(&compareDiskNorm)>;     // Ordered disk queue; returns disks closer to (0, 0) first.
 
-enum class PackingStatus {
+std::ostream &operator<<(std::ostream &out, PackingStatus status);
 
-    complete,          /// packing successfully generated
-    invalid,           /// no packing exists for these radii
-    precision_error,   /// interval precision bound exceeded
-    corona_error       /// corona assumption violated
-};
-
-
-
-/// ------------------------------------------------------------
-/// Priority queue type
-/// ------------------------------------------------------------
-/// Returns disks closest to origin first
-
-using DiskQueue =
-    std::multiset<DiskPtr, LessNormCompare>;
-
-
-
-std::ostream& operator<<(std::ostream& out, PackingStatus status);
-
-
-
-
-
-/// ------------------------------------------------------------
-/// Basic packing generator
-/// ------------------------------------------------------------
 
 class BasicGenerator {
 
 protected:
 
-    std::mt19937 rng;
+  std::mt19937 g;
+
+  std::vector<Interval> radii;     // Disk radii
+
+  const BaseType precision_upper_bound;     // Maximum allowed coordinate interval width
+
+  BaseType packing_radius;     // Target radius of the generated packing
+
+  size_t size_upper_bound;     // Maximum number of disks
+
+  std::list<DiskPtr> packing;     // Current packing
+
+  QueueType disk_queue;     // Queue used during generation
+
+  SpiralOpCache lookup_table;     // Cached geometric operators
+
+  std::vector<size_t> frequency_table;     // Counts disks of each type
+
+  size_t max_ignored_radii;
+
+  BaseType generated_radius;     // Radius actually covered by the packing
+
+  PackingStatus GapFill(Corona &corona);     // Fills gaps until the corona is complete
+
+  PackingStatus AdvancePacking();     // Picks the next disk and fills its corona
+
+  void ShuffleIndexes(std::vector<size_t> &shuffle);     // Randomizes disk type order
+
+  void Push(Disk &&new_disk, size_t index);     // Adds a disk and updates generator state
+
+  void Pop(size_t index);     // Removes the last added disk and restores state
+
+  void SetGeneratedRadius(const Disk &furthest_disk);
 
 
 
-    /// Radii of disk types
-    std::vector<Interval> radii;
+  bool HasIntersection(const Disk &new_disk) const;      // Checks whether a new disk intersects the packing
 
+  bool IsInBounds(const Disk &disk) const;     // Checks whether a disk is inside the target region
 
+  bool PackingSatisfiesConstraints() const;     // Checks packing constraints
 
-    /// Upper bound on interval width
-    const RadiusType precision_upper_bound;
+  bool PackingIsLargeEnough() const;      // Checks if the size limit was reached
 
-
-
-    /// Target radius of generated packing
-    RadiusType packing_radius;
-
-
-
-    /// Upper bound on disk count
-    size_t size_upper_bound;
-
-
-
-    /// Current packing state
-    std::list<DiskPtr> packing;
-
-
-
-    /// Queue of disks awaiting corona generation
-    DiskQueue disk_queue;
-
-
-
-    /// Lookup table for spiral operators
-    SpiralOpCache op_cache;
-
-
-
-    /// Disk frequency tracker
-    std::vector<size_t> frequency_table;
-
-
-
-    size_t max_ignored_radii;
-
-
-
-    /// Radius covered by generated packing
-    RadiusType generated_radius;
-
-
-
-    /// --------------------------------------------------------
-    /// Core recursive functions
-    /// --------------------------------------------------------
-
-    PackingStatus GapFill(Corona& corona);
-
-    PackingStatus AdvancePacking();
-
-
-
-    /// --------------------------------------------------------
-    /// Utility functions
-    /// --------------------------------------------------------
-
-    void ShuffleIndexes(std::vector<size_t>& shuffle);
-
-    void Push(Disk&& new_disk, size_t index);
-
-    void Pop(size_t index);
-
-    void SetGeneratedRadius(const Disk& furthest_disk);
-
-
-
-    bool HasIntersection(const Disk& new_disk) const;
-
-    bool IsInBounds(const Disk& disk) const;
-
-    bool PackingSatisfiesConstraints() const;
-
-    bool PackingIsLargeEnough() const;
-
-
-
+  
 public:
 
-    std::optional<ConnectivityGraph> graph;
+  std::optional<ConnectivityGraph> graph;
+
+  BasicGenerator(  
+    const std::vector<Interval> &radii,
+    const BaseType &packing_radius,
+    const BaseType &precision_upper_bound,
+    const size_t &size_upper_bound,
+    const size_t &max_ignored_radii = 0
+  );
+
+  PackingStatus Generate(const size_t &central_disk_type);     // Starts packing generation
+
+  void Reset();     // Clears the current state
+
+  PackingStatus Resume();     // Continues generation after parameter changes
+
+  
+  
+
+  void SetPackingRadius(const BaseType &new_packing_radius);     // Updates target packing radius
+
+  void SetSizeUpperBound(const size_t &new_size);     // Updates disk count limit
+
+  void SetRadii(const std::vector<Interval> &radii_);
 
 
 
-    BasicGenerator(
-        const std::vector<Interval>& radii,
-        const RadiusType& packing_radius,
-        const RadiusType& precision_upper_bound,
-        const size_t& size_upper_bound,
-        const size_t& max_ignored_radii = 0
-    );
 
+  const BaseType &GetGeneratedRadius();     // Returns covered packing radius
 
+  const BaseType &GetRadius();     // Returns target packing radius
 
-    /// Start generation from scratch
-    PackingStatus Generate(const size_t& central_disk_type);
-
-
-
-    /// Reset generator state
-    void Reset();
-
-
-
-    /// Continue generation after parameter change
-    PackingStatus Resume();
-
-
-
-    /// Parameter setters
-    void SetPackingRadius(const RadiusType& new_packing_radius);
-
-    void SetSizeUpperBound(const size_t& new_size);
-
-    void SetRadii(const std::vector<Interval>& radii_);
-
-
-
-    /// Getters
-
-    const RadiusType& GetGeneratedRadius();
-
-    const RadiusType& GetRadius();
-
-    const std::list<DiskPtr>& GetPacking();
+  const std::list<DiskPtr> &GetPacking();     // Returns generated packing
 
 };
 
-} // namespace diskpack
+}
